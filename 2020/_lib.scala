@@ -101,7 +101,7 @@ object WrappedArray {
 }
 
 object strings {
-  def foreachChar(string: Ptr[CChar])(f: CChar => Unit) = {
+  @inline def foreachChar(string: Ptr[CChar])(f: CChar => Unit) = {
     var i = 0
     var char: CChar = -1;
     while ({ char = string(i); char } != 0) {
@@ -115,6 +115,18 @@ object strings {
     var char: CChar = -1;
     while ({ char = string(i); char } != 0) {
       f(char, i)
+      i += 1
+    }
+  }
+}
+
+object loops {
+  @alwaysinline def loop(from: Int, to: Int, inclusive: Boolean = true)(
+      f: Int => Unit
+  ) {
+    var i = from
+    while (i <= { if (inclusive) to else to - 1 }) {
+      f(i)
       i += 1
     }
   }
