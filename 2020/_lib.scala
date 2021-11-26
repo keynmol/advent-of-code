@@ -23,7 +23,7 @@ final case class WrappedArray[T: Tag] private (
 
   def foreach(f: T => Unit) {
     var i = 0
-    while (i <= used) {
+    while (i < used) {
       f(!at(i))
       i += 1
     }
@@ -31,21 +31,30 @@ final case class WrappedArray[T: Tag] private (
 
   def foreachBreakable(break: => Boolean)(f: T => Unit) {
     var i = 0
-    while (!break && i <= used) {
+    while (!break && i < used) {
       f(!at(i))
       i += 1
     }
   }
 
+  def exists(cond: T => Boolean): Boolean = {
+    var found = false
+    foreachBreakable(found) { t =>
+      found = cond(t)
+    }
+
+    found
+  }
+
   def foreachPtr(f: Ptr[T] => Unit) {
     var i = 0
-    while (i <= used) {
+    while (i < used) {
       f(at(i))
       i += 1
     }
   }
 
-  @alwaysinline def size = used + 1
+  @alwaysinline def size = used
 
   @inline private def maxCapacity = {
     usedChunks * chunkSize
