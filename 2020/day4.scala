@@ -216,7 +216,7 @@ object Day4 {
   def main(args: Array[String]): Unit = Zone { implicit z =>
     val filename = toCString(args.head)
 
-    // println(s"Part 1: ${solve(filename, strict = false)}")
+    println(s"Part 1: ${solve(filename, strict = false)}")
     println(s"Part 2: ${solve(filename, strict = true)}")
   }
 }

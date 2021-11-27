@@ -81,12 +81,12 @@ object Day8 {
 
     var found = false
 
-    program.foreachBreakable(found) { cs =>
+    program.foreach.breakable(found) { cs =>
       if (string.strcmp(cs._1, Commands.NOP) == 0) {
         cs._1 = Commands.JMP
         if (terminates_normally(program, tracker)) {
           found = true
-          println("Found it!")
+          // println("Found it!")
         } else {
           cs._1 = Commands.NOP
         }
@@ -94,7 +94,7 @@ object Day8 {
         cs._1 = Commands.NOP
         if (terminates_normally(program, tracker)) {
           found = true
-          println("Found it!")
+          // println("Found it!")
         } else {
           cs._1 = Commands.JMP
         }

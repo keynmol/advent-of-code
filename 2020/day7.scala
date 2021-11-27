@@ -49,19 +49,16 @@ object Day7 {
         val containerColor = parse.readBagColor(line, plural = true)
         val skip = string.strlen(containerColor).toInt + " bags contain ".length
         val noOtherBags = string.strncmp(line + skip, c"no", 2.toUInt) == 0
-        // val colorCounts = stackalloc[CStruct2[CString, Int]]
-        // colorCounts._1 = containerColor
-        // colorCounts._2 = 0
 
         if (!noOtherBags) {
           val newLine = line + skip
           val originalLength = string.strlen(newLine).toInt
           var remaining = originalLength
-          stdio.printf(c">'%s'\n", line)
-          stdio.printf(c">>'%s'\n", newLine)
+          // stdio.printf(c">'%s'\n", line)
+          // stdio.printf(c">>'%s'\n", newLine)
           while (remaining > 2) {
             val next = newLine + (originalLength - remaining)
-            stdio.printf(c">>>'%s'\n", next)
+            // stdio.printf(c">>>'%s'\n", next)
             stdio.sscanf(next, c"%d%n", bagCount, rem)
 
             val isSeveral = !bagCount == 1
@@ -79,33 +76,30 @@ object Day7 {
             if (next(toSkip) == ',') {
               remaining = remaining - toSkip - 2
             } else remaining = remaining - toSkip
-            stdio.printf(c"%d, %s, %d\n", !bagCount, bagColor, remaining)
+            // stdio.printf(c"%d, %s, %d\n", !bagCount, bagColor, remaining)
 
             val mem = stackalloc[CStruct3[CString, CString, Int]]
             mem._1 = bagColor
             mem._2 = containerColor
             mem._3 = !bagCount
 
-            // colorCounts._2 = colorCounts._2 + !bagCount
-
             ar.appendAndGrow(!mem)
 
           }
         }
 
-        // counts.appendAndGrow(colorCounts)
       }
 
       val enclosure = WrappedArray.create[CString]()
 
       def mark(color: CString): Unit = {
         var found = false
-        enclosure.foreachBreakable(found) { cs =>
+        enclosure.foreach.breakable(found) { cs =>
           if (string.strcmp(cs, color) == 0) found = true
         }
 
         if (found) {
-          stdio.printf(c"Already marked: %s\n", color)
+          // stdio.printf(c"Already marked: %s\n", color)
         } else {
           enclosure.appendAndGrow(color)
           ar.foreach { ptr =>
@@ -132,15 +126,15 @@ object Day7 {
         cnt
       }
 
-      ar.foreach { cs =>
-        stdio.printf(c"%s -> %s\n", cs._1, cs._2)
-      }
+      // ar.foreach { cs =>
+      //   stdio.printf(c"%s -> %s\n", cs._1, cs._2)
+      // }
 
       mark(c"shiny gold")
 
-      enclosure.foreach { cs =>
-        stdio.printf(c"Can contain shiny gold: %s\n", cs)
-      }
+      // enclosure.foreach { cs =>
+      //   stdio.printf(c"Can contain shiny gold: %s\n", cs)
+      // }
 
       val part_1_answer = enclosure.size - 1
       var part_2_answer = sum(c"shiny gold")

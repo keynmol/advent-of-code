@@ -9,8 +9,8 @@ object Day1 {
   def solve_part_1(array: WrappedArray[Int]) = {
     var found = -1
 
-    array.foreachBreakable(found != -1) { el1 =>
-      array.foreachBreakable(found != -1) { el2 =>
+    array.foreach.breakable(found != -1) { el1 =>
+      array.foreach.breakable(found != -1) { el2 =>
         if (el1 + el2 == 2020) {
           println(s"> $el1, $el2")
           found = el1 * el2
@@ -24,9 +24,9 @@ object Day1 {
   def solve_part_2(array: WrappedArray[Int]) = {
     var found = -1
 
-    array.foreachBreakable(found != -1) { el1 =>
-      array.foreachBreakable(found != -1) { el2 =>
-        array.foreachBreakable(found != -1) { el3 =>
+    array.foreach.breakable(found != -1) { el1 =>
+      array.foreach.breakable(found != -1) { el2 =>
+        array.foreach.breakable(found != -1) { el3 =>
           if (el1 + el2 + el3 == 2020) {
             println(s"> $el1, $el2, $el3")
             found = el1 * el2 * el3
