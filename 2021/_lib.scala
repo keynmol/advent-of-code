@@ -160,6 +160,26 @@ object files {
 
     stdio.fclose(file)
   }
+
+  def parsedLines(filename: String)(f: (CString, parser.Parser) => Unit)(
+      implicit z: Zone
+  ) = { parsedLinesWithIndex(filename)((s, p, _) => f(s, p)) }
+
+  def parsedLinesWithIndex(filename: String, maxLineLength: Int = 100)(
+      f: (CString, parser.Parser, Int) => Unit
+  )(implicit z: Zone) = {
+    val file = stdio.fopen(toCString(filename), c"r")
+    val line = alloc[CChar](maxLineLength)
+    var i = 0
+    val p = parser.init(line)
+    while (stdio.fgets(line, maxLineLength, file) != null) {
+      f(line, p, i)
+      i += 1
+      p.rewind()
+    }
+
+    stdio.fclose(file)
+  }
 }
 
 object parser {
