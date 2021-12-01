@@ -3,3 +3,8 @@
 **/.metals
 **/.scala
 .Rproj.user
+**/.bloop
+**/target/**
+**/project/project/**
+**/project/target/**
+metals.sbt
