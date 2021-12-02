@@ -261,6 +261,7 @@ object parser {
     def remainingString: CString = cursor._2
     def consumed: UInt = cursor._1
     def finished: Boolean = cursor._1 == cursor._3
+    def successful = success
 
     @alwaysinline val rewind: Parser0[Nothing] = () => {
       cursor._2 = cursor._2 - cursor._1
