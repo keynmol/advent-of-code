@@ -13,7 +13,7 @@ object Day3 {
 
   def main(args: Array[String]): Unit = {
     Zone.apply { implicit z =>
-      val SIZE = args.tail.headOption.map(_.toInt).getOrElse(12)
+      val SIZE = if(args.head.endsWith("-sample")) 5 else 12
       val frequencies = stackalloc[Int](SIZE)
       var total = 0
 
