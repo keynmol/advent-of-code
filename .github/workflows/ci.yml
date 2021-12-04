@@ -1,0 +1,25 @@
+name: CI
+on:
+  push:
+    branches: ["main"]
+
+env:
+  JABBA_INDEX: 'https://github.com/typelevel/jdk-index/raw/main/index.json'
+
+jobs:
+  run2021:
+    strategy:
+      fail-fast: true
+      matrix:
+        day: [1, 2, 3, 4]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: coursier/cache-action@v3      
+      - uses: olafurpg/setup-scala@v13
+        with:
+          java-version: graalvm-ce-java17@21.3
+      - name: Install Scala CLI
+        run: curl -sSLf https://virtuslab.github.io/scala-cli-packages/scala-setup.sh | sh
+      - name: Run tests 
+        run: scala-cli 2021/day${{ matrix.day }}.scala 2021/inputs/day${{ matrix.day }}-sample
