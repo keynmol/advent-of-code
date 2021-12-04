@@ -23,25 +23,11 @@ final case class WrappedArray[T: Tag] private (
     }
   }
 
-  def foreach(f: T => Unit) {
-    var i = 0
-    while (i < used) {
-      f(!at(i))
-      i += 1
-    }
-  }
-
-  def foreachBreakable(break: => Boolean)(f: T => Unit) {
-    var i = 0
-    while (!break && i < used) {
-      f(!at(i))
-      i += 1
-    }
-  }
+  def foreach = new PartiallyAppliedForeach[T](this)
 
   def exists(cond: T => Boolean): Boolean = {
     var found = false
-    foreachBreakable(found) { t =>
+    foreach.breakable(found) { t =>
       found = cond(t)
     }
 
@@ -99,6 +85,36 @@ final case class WrappedArray[T: Tag] private (
       justAppend(value)
     }
   }
+
+  class PartiallyAppliedForeach[T: Tag](ar: WrappedArray[T]) {
+    @alwaysinline def apply(f: T => Unit) = {
+      withIndex((el, _) => f(el))
+    }
+
+    def withIndex(f: (T, Int) => Unit) = {
+      var i = 0
+      while (i < used) {
+        f(!ar.at(i), i)
+        i += 1
+      }
+    }
+    def breakable(stopWhen: => Boolean)(f: T => Unit) = {
+      breakableWithIndex(stopWhen)((el, _) => f(el))
+    }
+    def breakableWithIndex(stopWhen: => Boolean)(f: (T, Int) => Unit) = {
+      var i = 0
+      while (!stopWhen && i < used) {
+        f(!ar.at(i), i)
+        i += 1
+      }
+    }
+  }
+
+  def continuous(mem: Ptr[T]) = {
+    foreach.withIndex { case (t, idx) =>
+      !(mem + idx) = t
+    }
+  }
 }
 
 object WrappedArray {
@@ -137,6 +153,20 @@ object loops {
   ) {
     var i = from
     while (i <= { if (inclusive) to else to - 1 }) {
+      f(i)
+      i += 1
+    }
+  }
+  @alwaysinline def breakable(
+      from: Int,
+      to: Int,
+      stopWhen: => Boolean,
+      inclusive: Boolean = true
+  )(
+      f: Int => Unit
+  ) {
+    var i = from
+    while (!stopWhen && i <= { if (inclusive) to else to - 1 }) {
       f(i)
       i += 1
     }
