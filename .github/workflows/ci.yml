@@ -31,4 +31,4 @@ jobs:
         run: ./scala-cli 2021/day${{ matrix.day }}.scala 2021/_lib.scala -- 2021/inputs/day${{ matrix.day }}-sample | tee results.txt
 
       - name: Validate result
-        run: ./scala-cli validate.scala results.txt 2021 ${{ matrix.day }}
+        run: ./scala-cli validate.scala -- results.txt 2021 ${{ matrix.day }}
