@@ -109,8 +109,6 @@ object DayStub {
           }
         }
 
-        println("-------------")
-
         lines.foreach { line =>
           if (isDiagonal(line)) {
             val yIncrement = if (line._2 > line._4) -1 else +1
