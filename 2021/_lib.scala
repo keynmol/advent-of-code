@@ -5,7 +5,6 @@
 import scalanative.libc.stdio
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
-import scala.scalanative.libc.stdlib
 import scala.scalanative.annotation.alwaysinline
 import scala.scalanative.libc
 
@@ -51,7 +50,7 @@ final case class WrappedArray[T: Tag] private (
   @alwaysinline def at(n: Int): Ptr[T] = {
     val chunkLocation = (n / chunkSize).toUInt
     val dataLocation = (n % chunkSize).toUInt
-    val chunkOffset = chunkLocation * sizeof[Ptr[T]]
+    // val chunkOffset = chunkLocation * sizeof[Ptr[T]]
     val chunkPtr = !(chunksData + chunkLocation)
     val dataOffset = sizeof[T] * dataLocation
     (chunkPtr + dataLocation.toUInt)
@@ -231,10 +230,19 @@ object parser {
     new Parser(!cur)
   }
 
-  class Parser private[parser] (cursor: Cursor)(implicit z: Zone) {
+  class Parser private[parser] (private var cursor: Cursor) {
 
     final private val ONE = 1.toUInt
     final private var success = true
+
+    def resetInPlace(str: CString)(implicit z: Zone) = {
+      cursor = alloc[CStruct3[Consumed, Remainder, Length]]
+      !(cursor.at1) = 0.toUInt
+      !(cursor.at2) = str
+      !(cursor.at3) = libc.string.strlen(str).toUInt
+      
+      this
+    }
 
     @alwaysinline private def shift(n: UInt): Parser = {
       if (success) {

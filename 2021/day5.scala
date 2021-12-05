@@ -5,7 +5,7 @@
 import scala.scalanative.unsafe._
 import scala.scalanative.annotation.alwaysinline
 
-object DayStub {
+object Day4 {
   @alwaysinline def max(a: Int, b: Int) = if (a > b) a else b
   @alwaysinline def min(a: Int, b: Int) = if (a > b) b else a
 
@@ -18,36 +18,34 @@ object DayStub {
 
     yDiff == xDiff || yDiff == -xDiff
   }
+  
+  def isHorizontal(l: Line) = {
+    val yDiff = l._2 - l._4
+    val xDiff = l._1 - l._3
+
+    yDiff == 0 || xDiff == 0
+  }
 
   def readLines(file: String, lines: WrappedArray[Line], diagonal: Boolean)(
       implicit z: Zone
   ) = {
-    val x1 = stackalloc[Int]
-    val x2 = stackalloc[Int]
-    val y1 = stackalloc[Int]
-    val y2 = stackalloc[Int]
-
     var maxX = -1
     var maxY = -1
     files.parsedLines(file) { case (_, parser) =>
-      parser
-        .int(x1)
-        .const(c",")()
-        .int(y1)
-        .const(c" -> ")()
-        .int(x2)
-        .const(c",")()
-        .int(y2)
       val st = stackalloc[CStruct4[Int, Int, Int, Int]]
-      st._1 = !x1
-      st._2 = !y1
-      st._3 = !x2
-      st._4 = !y2
-      if (!x1 == !x2 || !y1 == !y2 || (diagonal && isDiagonal(st))) {
-        if (!x1 > maxX) maxX = !x1
-        if (!x2 > maxX) maxX = !x2
-        if (!y1 > maxY) maxY = !y1
-        if (!y2 > maxY) maxY = !y2
+      parser
+        .int(st.at1)
+        .const(c",")()
+        .int(st.at2)
+        .const(c" -> ")()
+        .int(st.at3)
+        .const(c",")()
+        .int(st.at4)
+      if (isHorizontal(st) || (diagonal && isDiagonal(st))) {
+        if (st._1 > maxX) maxX = st._1
+        if (st._3 > maxX) maxX = st._3
+        if (st._2 > maxY) maxY = st._2
+        if (st._4 > maxY) maxY = st._4
         lines.appendAndGrow(st)
       }
     }
