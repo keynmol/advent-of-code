@@ -10,8 +10,8 @@ import scala.scalanative.libc.string
 import scala.scalanative.annotation.alwaysinline
 
 object DayStub {
-  @alwaysinline def max(a: Int, b: Int) = if(a > b) a else b
-  @alwaysinline def min(a: Int, b: Int) = if(a > b) b else a
+  @alwaysinline def max(a: Int, b: Int) = if (a > b) a else b
+  @alwaysinline def min(a: Int, b: Int) = if (a > b) b else a
 
   type Line = CStruct4[Int, Int, Int, Int]
   type Size = CStruct2[Int, Int]
@@ -23,36 +23,44 @@ object DayStub {
     yDiff == xDiff || yDiff == -xDiff
   }
 
+  def readLines(file: String, lines: WrappedArray[Line], diagonal: Boolean)(
+      implicit z: Zone
+  ) = {
+    val x1 = stackalloc[Int]
+    val x2 = stackalloc[Int]
+    val y1 = stackalloc[Int]
+    val y2 = stackalloc[Int]
 
-  def readLines(file: String, lines: WrappedArray[Line], diagonal: Boolean)(implicit z: Zone) = {
-      val x1 = stackalloc[Int]
-      val x2 = stackalloc[Int]
-      val y1 = stackalloc[Int]
-      val y2 = stackalloc[Int]
-
-      var answer = 0
-      var maxX = -1
-      var maxY = -1
-      files.parsedLines(file) { case (line, parser) =>
-        parser.int(x1).const(c",")().int(y1).const(c" -> ")().int(x2).const(c",")().int(y2)
-          val st = stackalloc[CStruct4[Int, Int, Int, Int]]
-          st._1 = !x1
-          st._2 = !y1
-          st._3 = !x2
-          st._4 = !y2
-        if(!x1 == !x2 || !y1 == !y2 || (diagonal && isDiagonal(st))) {
-          if(!x1 > maxX) maxX = !x1
-          if(!x2 > maxX) maxX = !x2
-          if(!y1 > maxY) maxY = !y1
-          if(!y2 > maxY) maxY = !y2
-          lines.appendAndGrow(st)
-        }
+    var answer = 0
+    var maxX = -1
+    var maxY = -1
+    files.parsedLines(file) { case (line, parser) =>
+      parser
+        .int(x1)
+        .const(c",")()
+        .int(y1)
+        .const(c" -> ")()
+        .int(x2)
+        .const(c",")()
+        .int(y2)
+      val st = stackalloc[CStruct4[Int, Int, Int, Int]]
+      st._1 = !x1
+      st._2 = !y1
+      st._3 = !x2
+      st._4 = !y2
+      if (!x1 == !x2 || !y1 == !y2 || (diagonal && isDiagonal(st))) {
+        if (!x1 > maxX) maxX = !x1
+        if (!x2 > maxX) maxX = !x2
+        if (!y1 > maxY) maxY = !y1
+        if (!y2 > maxY) maxY = !y2
+        lines.appendAndGrow(st)
       }
+    }
 
     val size = alloc[CStruct2[Int, Int]]
     size._1 = maxX + 1
     size._2 = maxY + 1
-    
+
     size
   }
 
@@ -67,19 +75,17 @@ object DayStub {
 
         val MAP = stackalloc[Int](width * height)
 
-
-        lines.foreach {line => 
-          loops.loop(min(line._1, line._3), max(line._1, line._3)) {col => 
-            loops.loop(min(line._2, line._4), max(line._2, line._4)) {row => 
-                MAP(row * width + col) += 1
+        lines.foreach { line =>
+          loops.loop(min(line._1, line._3), max(line._1, line._3)) { col =>
+            loops.loop(min(line._2, line._4), max(line._2, line._4)) { row =>
+              MAP(row * width + col) += 1
             }
           }
         }
 
-        loops.loop(0, width*height, inclusive = false) {n => 
-          if(MAP(n) > 1) answer +=1
+        loops.loop(0, width * height, inclusive = false) { n =>
+          if (MAP(n) > 1) answer += 1
         }
-
 
         answer
       }
@@ -93,12 +99,11 @@ object DayStub {
 
         val MAP = stackalloc[Int](width * height)
 
-
-        lines.foreach {line => 
-          if(!isDiagonal(line)) {
-            loops.loop(min(line._1, line._3), max(line._1, line._3)) {col => 
-              loops.loop(min(line._2, line._4), max(line._2, line._4)) {row => 
-                  MAP(row * width + col) += 1
+        lines.foreach { line =>
+          if (!isDiagonal(line)) {
+            loops.loop(min(line._1, line._3), max(line._1, line._3)) { col =>
+              loops.loop(min(line._2, line._4), max(line._2, line._4)) { row =>
+                MAP(row * width + col) += 1
               }
             }
           }
@@ -106,14 +111,14 @@ object DayStub {
 
         println("-------------")
 
-        lines.foreach { line => 
-          if(isDiagonal(line)) {
-            val yIncrement = if(line._2 > line._4) -1 else +1
-            val xIncrement = if(line._1 > line._3) -1 else +1
+        lines.foreach { line =>
+          if (isDiagonal(line)) {
+            val yIncrement = if (line._2 > line._4) -1 else +1
+            val xIncrement = if (line._1 > line._3) -1 else +1
             var col = line._1
             var row = line._2
 
-            while(!(col == line._3 && row == line._4)) {
+            while (!(col == line._3 && row == line._4)) {
               MAP(row * width + col) += 1
               col += xIncrement
               row += yIncrement
@@ -122,11 +127,9 @@ object DayStub {
           }
         }
 
-
-        loops.loop(0, width*height, inclusive = false) {n => 
-          if(MAP(n) > 1) answer +=1
+        loops.loop(0, width * height, inclusive = false) { n =>
+          if (MAP(n) > 1) answer += 1
         }
-
 
         answer
       }
