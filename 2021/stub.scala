@@ -1,5 +1,6 @@
 // using scala 2.13.6
 // using scala-native
+// using options -Ywarn-unused
 
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
