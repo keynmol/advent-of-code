@@ -8,6 +8,18 @@ import scala.scalanative.unsigned._
 import scala.scalanative.annotation.alwaysinline
 import scala.scalanative.libc
 
+trait ToPrintF[T] {
+  def format: CString
+}
+
+object ToPrintF {
+  def as[T](cstr: CString) = new ToPrintF[T] {
+    def format = cstr
+  }
+  implicit val intPrintF: ToPrintF[Int] = as[Int](c"%d")
+  implicit val strPrintF: ToPrintF[CString] = as[CString](c"%s")
+}
+
 final case class WrappedArray[T: Tag] private (
     var chunksData: Ptr[Ptr[T]],
     private val chunkSize: Int,
@@ -176,7 +188,7 @@ object files {
   def lines(filename: String)(f: CString => Unit)(implicit z: Zone) = {
     linesWithIndex(filename)((s, _) => f(s))
   }
-  def linesWithIndex(filename: String, maxLineLength: Int = 100)(
+  def linesWithIndex(filename: String, maxLineLength: Int = 10_000)(
       f: (CString, Int) => Unit
   )(implicit z: Zone) = {
     val file = stdio.fopen(toCString(filename), c"r")
@@ -271,6 +283,13 @@ object parser {
 
       shift(!n)
     }
+    
+    // @alwaysinline val char: Parser1[Byte] = ptr => {
+    //   val n = stackalloc[Byte]
+    //   success = stdio.sscanf(cursor._2, c"%c%n", ptr, n) == 1
+
+    //   shift(!n.toUInt)
+    // }
 
     @alwaysinline val space: Parser0[Nothing] = () => {
       stdio.sscanf(cursor._2, c" ")

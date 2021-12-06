@@ -5,7 +5,7 @@
 import scala.util.Try
 import com.eed3si9n.expecty.Expecty.{assert as expect}
 
-case class A(part1: Int, part2: Int):
+case class A(part1: Long, part2: Long):
   def render = s"Part 1: $part1\nPart 2: $part2"
 
 val answers = Map(
@@ -14,7 +14,8 @@ val answers = Map(
     2 -> A(150, 900),
     3 -> A(198, 230),
     4 -> A(4512, 1924),
-    5 -> A(5, 12)
+    5 -> A(5, 12),
+    6 -> A(5934, 26984457539L)
   )
 )
 
