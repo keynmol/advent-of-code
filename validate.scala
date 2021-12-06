@@ -28,11 +28,11 @@ val answers = Map(
   val lines = contents.linesIterator.toList.map(_.trim).filterNot(_.isEmpty)
 
   val part1 = lines.collectFirst { case s"Part 1: $num" =>
-    num.toInt
+    num.toLong
   }.get
 
   val part2 = lines.collectFirst { case s"Part 2: $num" =>
-    num.toInt
+    num.toLong
   }.get
 
   val answer = A(part1, part2)

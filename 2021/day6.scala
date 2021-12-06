@@ -66,7 +66,6 @@ object DayStub {
 
         loops.loop(1, 80) { day =>
           cycleDay(state)
-          stdio.printf(c"Day %d: there is %ld fish\n", day, sum(state))
         }
 
         sum(state)
@@ -85,7 +84,6 @@ object DayStub {
 
         loops.loop(1, 256) { day =>
           cycleDay(state)
-          stdio.printf(c"Day %d: there is %ld fish\n", day, sum(state))
         }
         sum(state)
       }
