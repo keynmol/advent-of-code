@@ -156,6 +156,15 @@ object strings {
       i += 1
     }
   }
+
+  def contains(str: CString, char: CChar, len: Int) = {
+    var found = false
+    loops.breakable(0, len - 1, stopWhen = found) {idx => 
+      found = str(idx) == char
+    }
+
+    found
+  }
 }
 
 object loops {
