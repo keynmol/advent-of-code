@@ -137,6 +137,41 @@ object WrappedArray {
     WrappedArray(data, chunkSize, 0)
   }
 }
+object Matrix {
+  type Typ[T] = CStruct3[Ptr[T], Int, Int]
+  implicit class Mops[T: Tag](val ptr: Typ[T]) {
+    final def width = ptr._2
+    final def height = ptr._3
+    final def data = ptr._1
+
+    final def maxRow = height - 1
+    final def maxCol = width - 1
+    final def at(row: Int, col: Int, default: T): T = {
+      if (row >= height) default
+      else if (col >= width) default
+      else if (row < 0) default
+      else if (col < 0) default
+      else data(row * width + col)
+    }
+
+    final def left(row: Int, col: Int, default: T): T = {
+      if (col == 0) default
+      else at(row, col - 1, default)
+    }
+    final def right(row: Int, col: Int, default: T): T = {
+      if (col == width - 1) default
+      else at(row, col + 1, default)
+    }
+    final def down(row: Int, col: Int, default: T): T = {
+      if (row == height - 1) default
+      else at(row + 1, col, default)
+    }
+    final def up(row: Int, col: Int, default: T): T = {
+      if (row == 0) default
+      else at(row - 1, col, default)
+    }
+  }
+}
 
 object strings {
   @inline def foreachChar(string: Ptr[CChar])(f: CChar => Unit) = {
@@ -159,7 +194,7 @@ object strings {
 
   def contains(str: CString, char: CChar, len: Int) = {
     var found = false
-    loops.breakable(0, len - 1, stopWhen = found) {idx => 
+    loops.breakable(0, len - 1, stopWhen = found) { idx =>
       found = str(idx) == char
     }
 
@@ -261,7 +296,7 @@ object parser {
       !(cursor.at1) = 0.toUInt
       !(cursor.at2) = str
       !(cursor.at3) = libc.string.strlen(str).toUInt
-      
+
       this
     }
 
@@ -292,7 +327,7 @@ object parser {
 
       shift(!n)
     }
-    
+
     // @alwaysinline val char: Parser1[Byte] = ptr => {
     //   val n = stackalloc[Byte]
     //   success = stdio.sscanf(cursor._2, c"%c%n", ptr, n) == 1

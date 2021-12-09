@@ -5,7 +5,7 @@
 import scala.scalanative.unsafe._
 import scala.scalanative.annotation.alwaysinline
 
-object Day4 {
+object Day5 {
   @alwaysinline def max(a: Int, b: Int) = if (a > b) a else b
   @alwaysinline def min(a: Int, b: Int) = if (a > b) b else a
 

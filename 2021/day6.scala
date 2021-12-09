@@ -9,7 +9,7 @@ import scala.scalanative.libc.stdlib
 import scala.scalanative.runtime.libc
 import scala.scalanative.libc.string
 
-object DayStub {
+object Day6 {
   val SPAWN_DAYS = 7
 
   def readCalledOutNumbers(p: parser.Parser, ar: WrappedArray[Long])(implicit
