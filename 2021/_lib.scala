@@ -7,6 +7,7 @@ import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
 import scala.scalanative.annotation.alwaysinline
 import scala.scalanative.libc
+import scala.util.chaining._
 
 trait ToPrintF[T] {
   def format: CString
@@ -170,6 +171,37 @@ object Matrix {
       if (row == 0) default
       else at(row - 1, col, default)
     }
+  }
+}
+class Stack[T: Tag] private (internal: WrappedArray[T]) {
+  private var current = -1
+  def isEmpty: Boolean = current == -1
+  def reset() =
+    current = -1 // note that we don't free up the memory :(
+  def push(t: T)(implicit z: Zone) = {
+    val lastIdx = internal.size - 1
+    current += 1
+    if (current > lastIdx) internal.appendAndGrow(t)
+    else {
+      !internal.at(current) = t
+    }
+    internal.appendAndGrow(t)
+  }
+
+  def pop() = {
+    !(internal.at(current)).tap { _ => current -= 1 }
+  }
+
+  def peek(): T = {
+    !(internal.at(current))
+  }
+}
+
+object Stack {
+  def create[T: Tag](implicit z: Zone) = {
+    val int = WrappedArray.create[T]()
+
+    new Stack(int)
   }
 }
 
