@@ -155,6 +155,22 @@ object Matrix {
       else data(row * width + col)
     }
 
+    final def valid(row: Int, col: Int): Boolean = {
+      if (row >= height) false
+      else if (col >= width) false
+      else if (row < 0) false
+      else if (col < 0) false
+      else true
+    }
+
+    final def set(row: Int, col: Int, value: T): Boolean = {
+      if (valid(row, col)) {
+        data(row * width + col) = value
+        true
+      } else false
+
+    }
+
     final def left(row: Int, col: Int, default: T): T = {
       if (col == 0) default
       else at(row, col - 1, default)
