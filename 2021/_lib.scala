@@ -98,6 +98,15 @@ final case class WrappedArray[T: Tag] private (
     }
   }
 
+  def indexOf(t: T) = {
+    var found = -1
+    foreach.breakableWithIndex(stopWhen = found != -1) { case (el, idx) =>
+      if (el == t) found = idx
+
+    }
+    found
+  }
+
   class PartiallyAppliedForeach[T: Tag](ar: WrappedArray[T]) {
     @alwaysinline def apply(f: T => Unit) = {
       withIndex((el, _) => f(el))
@@ -218,6 +227,80 @@ object Stack {
     val int = WrappedArray.create[T]()
 
     new Stack(int)
+  }
+}
+
+object Bitset {
+  // first 16 bits are the number of Longs
+  type Typ = Ptr[Int]
+  private val bits = sizeof[Int].toInt * 8
+  @alwaysinline def size(typ: Typ) = {
+    val numLongs = typ(0)
+    numLongs
+  }
+
+  @alwaysinline private def blocks(elements: Int) = {
+    if ((elements % bits) > 0) 1 + (elements / bits) else elements / bits
+  }
+  def create(elements: Int)(implicit z: Zone): Typ = {
+    val nBlocks =
+      if ((elements % bits) > 0) 1 + (elements / bits) else elements / bits
+
+    val memory = alloc[Int](1 + elements / bits)
+    memory(0) = elements
+
+    memory
+  }
+
+  implicit class typOps(val t: Typ) {
+    def set(n: Int) = {
+      val sz = size(t)
+      if (n <= sz) {
+        val blockId = 1 + (n / bits)
+        val bitId = n % bits
+        val mask = 1 << (bits - bitId - 1)
+        t(blockId) = t(blockId) | mask
+      }
+    }
+    def unset(n: Int) = {
+      val sz = size(t)
+      if (n <= sz) {
+        val blockId = 1 + (n / bits)
+        val bitId = n % bits
+        val mask = 1 << (bits - bitId - 1)
+        t(blockId) = t(blockId) & ~mask
+      }
+    }
+
+    def get(n: Int): Boolean = {
+      val sz = size(t)
+      if (n <= sz) {
+        val blockId = 1 + (n / bits)
+        val bitId = n % bits
+        val mask = 1 << (bits - bitId - 1)
+        (t(blockId) & mask) == mask
+      } else false
+    }
+
+    def str = {
+      stdio.printf(c"[Bitset (max %d elements): ", size(t))
+      loops.loop(1, size(t)) { i =>
+        if (get(i)) stdio.printf(c"%d, ", i)
+      }
+      stdio.printf(c"]\n")
+    }
+
+    def copy(implicit z: Zone): Typ = {
+      val newMem = alloc[Int](blocks(size(t)) + 1)
+      newMem(0) = size(t)
+      loops.loop(1, blocks(size(t))) { i =>
+        newMem(i) = t(i)
+      }
+
+
+
+      newMem
+    }
   }
 }
 
