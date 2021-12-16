@@ -60,13 +60,27 @@ final case class WrappedArray[T: Tag] private (
     usedChunks * chunkSize
   }
 
-  @alwaysinline def at(n: Int): Ptr[T] = {
+  private def location(n: Int): Ptr[T] = {
     val chunkLocation = (n / chunkSize).toUInt
     val dataLocation = (n % chunkSize).toUInt
     // val chunkOffset = chunkLocation * sizeof[Ptr[T]]
     val chunkPtr = !(chunksData + chunkLocation)
-    val dataOffset = sizeof[T] * dataLocation
+    // val dataOffset = sizeof[T] * dataLocation
     (chunkPtr + dataLocation.toUInt)
+  }
+
+  @alwaysinline def at(n: Int): Ptr[T] = {
+    location(n)
+    // val chunkLocation = (n / chunkSize).toUInt
+    // val dataLocation = (n % chunkSize).toUInt
+    // // val chunkOffset = chunkLocation * sizeof[Ptr[T]]
+    // val chunkPtr = !(chunksData + chunkLocation)
+    // val dataOffset = sizeof[T] * dataLocation
+    // (chunkPtr + dataLocation.toUInt)
+  }
+
+  def set(idx: Int, value: T) = {
+    !location(idx) = value
   }
 
   @alwaysinline def addChunk()(implicit z: Zone) = {
@@ -149,10 +163,39 @@ object WrappedArray {
 }
 object Matrix {
   type Typ[T] = CStruct3[Ptr[T], Int, Int]
+
+  def create[T: Tag](width: Int, height: Int)(implicit
+      z: Zone
+  ): Matrix.Typ[T] = {
+    val data = alloc[T](width * height)
+    val mt = alloc[Matrix.Typ[T]](1)
+    mt._1 = data
+    mt._2 = width
+    mt._3 = height
+
+    mt
+
+  }
   implicit class Mops[T: Tag](val ptr: Typ[T]) {
     final def width = ptr._2
     final def height = ptr._3
     final def data = ptr._1
+
+    final def pack(row: Int, col: Int) = {
+      val default = -1
+      if (row >= height) default
+      else if (col >= width) default
+      else if (row < 0) default
+      else if (col < 0) default
+      else row * width + col
+    }
+
+    @alwaysinline final def unpackRow(dense: Int) = {
+      dense / width
+    }
+    @alwaysinline final def unpackCol(dense: Int) = {
+      dense % width
+    }
 
     final def maxRow = height - 1
     final def maxCol = width - 1
@@ -162,6 +205,10 @@ object Matrix {
       else if (row < 0) default
       else if (col < 0) default
       else data(row * width + col)
+    }
+
+    final def unsafe(row: Int, col: Int): T = {
+      data(row * width + col)
     }
 
     final def valid(row: Int, col: Int): Boolean = {
@@ -195,6 +242,29 @@ object Matrix {
     final def up(row: Int, col: Int, default: T): T = {
       if (row == 0) default
       else at(row - 1, col, default)
+    }
+
+    final def copy(implicit z: Zone): Matrix.Typ[T] = {
+      val space = alloc[T](width * height)
+      val newMt = alloc[Matrix.Typ[T]](1)
+      newMt._1 = space
+      newMt._2 = width
+      newMt._3 = height
+      loops.loop(0, maxRow) { row =>
+        loops.loop(0, maxCol) { col =>
+          space(row * width + col) = ptr._1.apply(row * width + col)
+        }
+      }
+      newMt
+    }
+
+    final def reset(value: T): Matrix.Typ[T] = {
+      loops.loop(0, maxRow) { row =>
+        loops.loop(0, maxCol) { col =>
+          set(row, col, value)
+        }
+      }
+      ptr
     }
   }
 }
@@ -230,6 +300,55 @@ object Stack {
   }
 }
 
+object SlowIntMap {
+  type Typ = WrappedArray[Long]
+  def create(implicit z: Zone): Typ = {
+    WrappedArray.create[Long]()
+  }
+
+  @alwaysinline private def pack(row: Int, col: Int) = {
+    (row.toLong << 32) + col.toLong
+  }
+
+  @alwaysinline private def unpackFirst(dense: Long) = {
+    (dense >>> 32).toInt
+  }
+
+  @alwaysinline private def unpackSecond(dense: Long) = {
+    ((dense << 32) >>> 32).toInt
+  }
+
+  implicit class Ops(im: SlowIntMap.Typ) {
+    private def indexOf(key: Int) = {
+      var idx = -1
+      loops.breakable(0, im.size - 1, stopWhen = idx != -1) { i =>
+        val unpackedKey = unpackFirst(!im.at(i))
+        // stdio.printf(c"%d == %d\n", unpackedKey, key)
+        if (unpackedKey == key)
+          idx = i
+      }
+
+      idx
+    }
+    def put(key: Int, value: Int)(implicit z: Zone) = {
+      val packed = pack(key, value)
+      val idx = indexOf(key)
+      if (idx == -1)
+        im.appendAndGrow(packed)
+      else
+        im.set(idx, packed)
+    }
+
+    def getOrElse(key: Int, default: Int): Int = {
+      val idx = indexOf(key)
+      if (idx == -1)
+        default
+      else
+        unpackSecond(!(im.at(idx)))
+    }
+  }
+}
+
 object Bitset {
   // first 16 bits are the number of Longs
   type Typ = Ptr[Int]
@@ -243,10 +362,10 @@ object Bitset {
     if ((elements % bits) > 0) 1 + (elements / bits) else elements / bits
   }
   def create(elements: Int)(implicit z: Zone): Typ = {
-    val nBlocks =
-      if ((elements % bits) > 0) 1 + (elements / bits) else elements / bits
+    // val nBlocks =
+    //   if ((elements % bits) > 0) 1 + (elements / bits) else elements / bits
 
-    val memory = alloc[Int](1 + elements / bits)
+    val memory = alloc[Int](1 + blocks(elements))
     memory(0) = elements
 
     memory
@@ -272,6 +391,25 @@ object Bitset {
       }
     }
 
+    def foreach(el: Int => Unit) = {
+      loops.loop(1, blocks(size(t))) { blockId =>
+        val block = t(blockId)
+        if (block != 0) {
+          val blockOffset = (blockId - 1) * bits
+          loops.loop(0, bits) { bitId =>
+            val mask = 1 << (bits - bitId - 1)
+            println(s"$blockOffset, $blockId, ${block.toBinaryString.reverse
+              .padTo(bits, '0')
+              .reverse}, ${mask.toBinaryString.reverse.padTo(bits, '0').reverse}")
+            if ((block & mask) == mask) {
+              el(blockOffset + bitId)
+            }
+
+          }
+        }
+      }
+    }
+
     def get(n: Int): Boolean = {
       val sz = size(t)
       if (n <= sz) {
@@ -280,6 +418,15 @@ object Bitset {
         val mask = 1 << (bits - bitId - 1)
         (t(blockId) & mask) == mask
       } else false
+    }
+
+    def empty: Boolean = {
+      var nonEmpty = false
+      loops.breakable(1, blocks(size(t)), stopWhen = nonEmpty) { i =>
+        nonEmpty = t(i) != 0
+      }
+
+      !nonEmpty
     }
 
     def str = {
@@ -297,15 +444,15 @@ object Bitset {
         newMem(i) = t(i)
       }
 
-
-
       newMem
     }
   }
 }
 
 object strings {
-  @inline def foreachChar(string: Ptr[CChar])(f: CChar => Unit) = {
+  @alwaysinline def len(str: CString) = libc.string.strlen(str).toInt
+
+  @alwaysinline def foreachChar(string: Ptr[CChar])(f: CChar => Unit) = {
     var i = 0
     var char: CChar = -1;
     while ({ char = string(i); char } != 0) {
@@ -539,6 +686,48 @@ class ParseTests extends munit.FunSuite {
       assertEquals(cur.remainingLength, libc.string.strlen(STR).toUInt)
       assertEquals(libc.string.strcmp(cur.remainingString, STR).toInt, 0)
       assertEquals(cur.consumed, 0.toUInt)
+    }
+  }
+}
+
+class IntMapTests extends munit.FunSuite {
+  test("IntMap acts like a map") {
+    Zone { implicit z =>
+      import SlowIntMap._
+      val mp = SlowIntMap.create
+      mp.put(25, 128)
+      mp.put(0, 1024)
+      mp.put(378, 873)
+      mp.put(25, 128)
+
+      assertEquals(mp.getOrElse(25, -1), 128)
+      assertEquals(mp.getOrElse(378, -1), 873)
+      assertEquals(mp.getOrElse(0, -1), 1024)
+      assertEquals(mp.getOrElse(1, -1), -1)
+      assertEquals(mp.getOrElse(24, -1), -1)
+    }
+  }
+}
+
+class BitSetTests extends munit.FunSuite {
+
+  test("Bitset.foreach works") {
+    Zone { implicit z =>
+      val M = 48
+      val bs = Bitset.create(M)
+      import Bitset._
+
+      (1 to M).foreach { i =>
+        bs.set(i)
+      }
+
+      val ls = List.newBuilder[Int]
+
+      bs.foreach { el =>
+        ls.addOne(el)
+      }
+
+      assertEquals(ls.result(), (1 to M).toList)
     }
   }
 }

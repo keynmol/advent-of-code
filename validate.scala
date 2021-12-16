@@ -5,8 +5,11 @@
 import scala.util.Try
 import com.eed3si9n.expecty.Expecty.{assert as expect}
 
-case class A(part1: Long, part2: Long):
+case class A(part1: Long, part2: Option[Long]):
   def render = s"Part 1: $part1\nPart 2: $part2"
+
+object A:
+  def apply(part1: Long) = A(part1, None)
 
 val answers = Map(
   2021 -> Map(
@@ -20,7 +23,8 @@ val answers = Map(
     9 -> A(15, 1134),
     10 -> A(26397, 288957),
     11 -> A(1656, 195),
-    12 -> A(10, 36)
+    12 -> A(10, 36),
+    14 -> A(1588, 2188189693529L)
   )
 )
 
