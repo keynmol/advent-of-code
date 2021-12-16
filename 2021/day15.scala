@@ -2,12 +2,10 @@
 // using scala-native
 // using options -Ywarn-unused
 
+import scala.scalanative.libc.stdio
 import scala.scalanative.libc.string
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
-import scala.scalanative.libc.stdio
-import scala.scalanative.runtime.libc
-import scala.scalanative.libc.stdlib
 
 object Day15 {
   def readInput(file: String)(implicit z: Zone): Matrix.Typ[Int] = {
@@ -36,6 +34,32 @@ object Day15 {
     struct
   }
 
+  def printGraph(labyrinth: Matrix.Typ[Int]) = {
+    import Matrix._
+    loops.loop(0, labyrinth.maxRow) { row =>
+      loops.loop(0, labyrinth.maxCol) { col =>
+        val weight = labyrinth.unsafe(row, col)
+        loops.loop(-1, 1) { rowOffset =>
+          loops.loop(-1, 1) { colOffset =>
+            import scala.scalanative.libc.math.abs
+
+            if (abs(rowOffset) + abs(colOffset) == 1) {
+              val vRow = row + rowOffset
+              val vCol = col + colOffset
+
+              if (labyrinth.at(vRow, vCol, -1) != -1) {
+                val from = labyrinth.pack(vRow, vCol)
+                val to = labyrinth.pack(row, col)
+
+                stdio.printf(c"%d %d %d\n", from, to, weight)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     import Matrix._
     Zone.apply { implicit z =>
@@ -56,132 +80,108 @@ object Day15 {
         val prev = Matrix.create[Int](labyrinth.width, labyrinth.height)
         prev.reset(-1)
 
-        loops.loop(0, labyrinth.maxRow) { row =>
-          loops.loop(0, labyrinth.maxCol) { col =>
-            val weight = labyrinth.unsafe(row, col)
-            loops.loop(-1, 1) { rowOffset =>
-              loops.loop(-1, 1) { colOffset =>
-                import scala.scalanative.libc.math.abs
-
-                if (abs(rowOffset) + abs(colOffset) == 1) {
-                  val vRow = row + rowOffset
-                  val vCol = col + colOffset
-
-                  if (labyrinth.at(vRow, vCol, -1) != -1) {
-                    val from = dist.pack(vRow, vCol)
-                    val to = dist.pack(row, col)
-
-                    stdio.printf(c"%d %d %d\n", from, to, weight)
-                  }
-                }
-              }
-            }
-          }
-        }
-
         def getMin: Int = {
           var minDistance = Int.MaxValue
           var found = -1
-          loops.loop(0, dist.width * dist.height - 1) { idx =>
-            val row = dist.unpackRow(idx)
-            val col = dist.unpackCol(idx)
+          Q.foreach { idx =>
+            val row = dist.unpackRow(idx - 1)
+            val col = dist.unpackCol(idx - 1)
 
-            val inSet = Q.get(idx + 1)
-            if (inSet && dist.unsafe(row, col) < minDistance) {
-              found = dist.pack(row, col)
-              minDistance = dist.unsafe(row, col)
+            val candidate = dist.unsafe(row, col)
+            if (candidate < minDistance) {
+              found = idx - 1
+              minDistance = candidate
             }
           }
 
           found
         }
 
-        var i = 0f
+        var i = 0
+        val size = dist.width * dist.height
+        val start = System.currentTimeMillis()
+        var stop = false
 
-        while (!Q.empty) {
+        while (!Q.empty && !stop) {
           val next = getMin
-          val uRow = dist.unpackRow(next)
-          val uCol = dist.unpackCol(next)
-          Q.unset(next + 1)
-          i += 1
+          if (next == 0) {
+            stop = true
+          } else {
+            val uRow = dist.unpackRow(next)
+            val uCol = dist.unpackCol(next)
 
-          if (i % 100.0f == 0)
-            stdio.printf(
-              c"Processed %.2f\n",
-              100 * i / (dist.width * dist.height)
-            )
+            Q.unset(next + 1)
+            i += 1
 
-          loops.loop(-1, 1) { rowOffset =>
-            loops.loop(-1, 1) { colOffset =>
-              import scala.scalanative.libc.math.abs
+            var rowOffset = -1
 
-              if (abs(rowOffset) + abs(colOffset) == 1) {
-                val vRow = uRow + rowOffset
-                val vCol = uCol + colOffset
-                val vIdx = dist.pack(vRow, vCol) + 1
-                val length = labyrinth.at(uRow, uCol, -1)
-                val dist_v = dist.at(vRow, vCol, -1)
-                // stdio.printf(
-                //   c"For cell %d:%d visiting its neighbour %d:%d (offset: %d:%d) (%d)\n",
-                //   uRow,
-                //   uCol,
-                //   vRow,
-                //   vCol,
-                //   rowOffset,
-                //   colOffset,
-                //   length
-                // )
+            while (rowOffset <= 1) {
+              var colOffset = -1
+              while (colOffset <= 1) {
+                import scala.scalanative.libc.math.abs
 
-                if (dist_v != -1 && Q.get(vIdx)) {
-                  val dist_u = dist.unsafe(uRow, uCol)
-                  val alt = dist_u + length
-                  // stdio.printf(
-                  //   c"Distance: %d, alternative: %d + %d = %d\n",
-                  //   dist_v,
-                  //   dist_u,
-                  //   length,
-                  //   alt
-                  // )
+                if (abs(rowOffset) + abs(colOffset) == 1) {
+                  val vRow = uRow + rowOffset
+                  val vCol = uCol + colOffset
+                  val vIdx = dist.pack(vRow, vCol) + 1
 
-                  if (alt < dist_v) {
-                    // stdio.printf(c"Setting %d:%d to %d\n", vRow, vCol, alt)
-                    prev.set(vRow, vCol, dist.pack(uRow, uCol))
-                    dist.set(vRow, vCol, alt)
+                  if (dist.valid(vRow, vCol) && Q.get(vIdx)) {
+                    val dist_v = dist.at(vRow, vCol, -1)
+                    val length = labyrinth.at(uRow, uCol, -1)
+                    val dist_u = dist.unsafe(uRow, uCol)
+                    val alt = dist_u + length
+
+                    if (alt < dist_v) {
+                      prev.set(vRow, vCol, dist.pack(uRow, uCol))
+                      dist.set(vRow, vCol, alt)
+                    }
                   }
                 }
+
+                colOffset += 1
               }
+              rowOffset += 1
             }
           }
         }
         (dist, prev)
       }
 
-      val part_1_answer = {
-        val matrix = readInput(args.head)
-        val (results, prev) = dijkstra(matrix)
+      def replicate(labyrinth: Matrix.Typ[Int], times: Int) = {
+        val newMt =
+          Matrix.create[Int](labyrinth.width * times, labyrinth.height * times)
 
+        loops.loop(0, labyrinth.maxRow) { row =>
+          loops.loop(0, labyrinth.maxCol) { col =>
+            loops.loop(0, times - 1) { replicaVertical =>
+              loops.loop(0, times - 1) { replicaHorizontal =>
+                val newRow = replicaVertical * labyrinth.height + row
+                val newCol = replicaHorizontal * labyrinth.width + col
+                val append = replicaHorizontal + replicaVertical
+                val newStuff = (labyrinth.unsafe(row, col) + append) % 9
+                val newValue = if (newStuff == 0) 9 else newStuff
+
+                newMt.set(newRow, newCol, newValue)
+
+              }
+            }
+          }
+        }
+
+        newMt
+
+      }
+
+      def print(
+          matrix: Matrix.Typ[Int],
+          distances: Matrix.Typ[Int],
+          highlight: Bitset.Typ
+      ) = {
+        import Bitset._
         val red = toCString(Console.RED)
         val yello = toCString(Console.YELLOW)
         val green = toCString(Console.CYAN + Console.BOLD)
         val reset = toCString(Console.RESET)
-
-        val optimal = Bitset.create(results.width * results.height)
-        import Bitset._
-
-        def findOptimal = {
-          var u = results.pack(0, 0)
-          val UNDEFINED = -1
-
-          while (u != UNDEFINED) {
-            optimal.set(u)
-            u = prev.unsafe(
-              prev.unpackRow(u),
-              prev.unpackCol(u)
-            )
-          }
-        }
-
-        findOptimal
         stdio.printf(yello)
         stdio.printf(c"    ")
         loops.loop(0, matrix.maxCol) { col =>
@@ -196,8 +196,8 @@ object Day15 {
           stdio.printf(reset)
           loops.loop(0, matrix.maxCol) { col =>
             val elId = row * matrix.width + col
-            stdio.printf(c"%4d", results.unsafe(row, col))
-            if (optimal.get(elId))
+            stdio.printf(c"%4d", distances.unsafe(row, col))
+            if (highlight.get(elId))
               stdio.printf(green)
             else
               stdio.printf(red)
@@ -207,13 +207,48 @@ object Day15 {
           }
           stdio.printf(c"\n")
         }
+      }
+      def findOptimal(prev: Matrix.Typ[Int]): Bitset.Typ = {
+        import Bitset._
+        val optimal = Bitset.create(prev.width * prev.height)
+        var u = prev.pack(0, 0)
+        val UNDEFINED = -1
+
+        while (u != UNDEFINED) {
+          optimal.set(u)
+          u = prev.unsafe(
+            prev.unpackRow(u),
+            prev.unpackCol(u)
+          )
+        }
+
+        optimal
+      }
+
+      val part_1_answer = {
+        val matrix = readInput(args.head)
+        val (results, prev) = dijkstra(matrix)
+
+        val optimal = Bitset.create(results.width * results.height)
+
+        if (matrix.width < 100)
+          print(matrix, results, optimal)
 
         results.unsafe(0, 0)
       }
-
-      val part_2_answer = {}
-
       println(s"Part 1: ${part_1_answer}")
+
+      val part_2_answer = {
+        val matrix = readInput(args.head)
+        val large = replicate(matrix, 5)
+        val (dist, prev) = dijkstra(large)
+
+        if (matrix.width < 100)
+          print(large, dist, findOptimal(prev))
+
+        dist.unsafe(0, 0)
+      }
+
       println(s"Part 2: ${part_2_answer}")
     }
   }

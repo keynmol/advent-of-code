@@ -181,7 +181,7 @@ object Matrix {
     final def height = ptr._3
     final def data = ptr._1
 
-    final def pack(row: Int, col: Int) = {
+    @alwaysinline final def pack(row: Int, col: Int) = {
       val default = -1
       if (row >= height) default
       else if (col >= width) default
@@ -197,9 +197,9 @@ object Matrix {
       dense % width
     }
 
-    final def maxRow = height - 1
-    final def maxCol = width - 1
-    final def at(row: Int, col: Int, default: T): T = {
+    @alwaysinline final def maxRow = height - 1
+    @alwaysinline final def maxCol = width - 1
+    @alwaysinline final def at(row: Int, col: Int, default: T): T = {
       if (row >= height) default
       else if (col >= width) default
       else if (row < 0) default
@@ -207,11 +207,11 @@ object Matrix {
       else data(row * width + col)
     }
 
-    final def unsafe(row: Int, col: Int): T = {
+    @alwaysinline final def unsafe(row: Int, col: Int): T = {
       data(row * width + col)
     }
 
-    final def valid(row: Int, col: Int): Boolean = {
+    @alwaysinline final def valid(row: Int, col: Int): Boolean = {
       if (row >= height) false
       else if (col >= width) false
       else if (row < 0) false
@@ -219,27 +219,26 @@ object Matrix {
       else true
     }
 
-    final def set(row: Int, col: Int, value: T): Boolean = {
+    @alwaysinline final def set(row: Int, col: Int, value: T): Boolean = {
       if (valid(row, col)) {
         data(row * width + col) = value
         true
       } else false
-
     }
 
-    final def left(row: Int, col: Int, default: T): T = {
+    @alwaysinline final def left(row: Int, col: Int, default: T): T = {
       if (col == 0) default
       else at(row, col - 1, default)
     }
-    final def right(row: Int, col: Int, default: T): T = {
+    @alwaysinline final def right(row: Int, col: Int, default: T): T = {
       if (col == width - 1) default
       else at(row, col + 1, default)
     }
-    final def down(row: Int, col: Int, default: T): T = {
+    @alwaysinline final def down(row: Int, col: Int, default: T): T = {
       if (row == height - 1) default
       else at(row + 1, col, default)
     }
-    final def up(row: Int, col: Int, default: T): T = {
+    @alwaysinline final def up(row: Int, col: Int, default: T): T = {
       if (row == 0) default
       else at(row - 1, col, default)
     }
@@ -372,58 +371,61 @@ object Bitset {
   }
 
   implicit class typOps(val t: Typ) {
-    def set(n: Int) = {
-      val sz = size(t)
-      if (n <= sz) {
-        val blockId = 1 + (n / bits)
-        val bitId = n % bits
-        val mask = 1 << (bits - bitId - 1)
-        t(blockId) = t(blockId) | mask
-      }
+    @inline def set(n: Int) = {
+      // val sz = size(t)
+      // if (n <= sz) {
+      val blockId = 1 + (n / bits)
+      val bitId = n % bits
+      val mask = 1 << (bits - bitId - 1)
+      t(blockId) = t(blockId) | mask
+      // }
     }
-    def unset(n: Int) = {
-      val sz = size(t)
-      if (n <= sz) {
-        val blockId = 1 + (n / bits)
-        val bitId = n % bits
-        val mask = 1 << (bits - bitId - 1)
-        t(blockId) = t(blockId) & ~mask
-      }
+    @inline def unset(n: Int) = {
+      // val sz = size(t)
+      // if (n <= sz) {
+      val blockId = 1 + (n / bits)
+      val bitId = n % bits
+      val mask = 1 << (bits - bitId - 1)
+      t(blockId) = t(blockId) & ~mask
+      // }
     }
 
     def foreach(el: Int => Unit) = {
-      loops.loop(1, blocks(size(t))) { blockId =>
+      var blockId = 1
+      while (blockId <= blocks(size(t))) {
         val block = t(blockId)
         if (block != 0) {
           val blockOffset = (blockId - 1) * bits
-          loops.loop(0, bits) { bitId =>
+          loops.loop(0, bits - 1) { bitId =>
             val mask = 1 << (bits - bitId - 1)
-            println(s"$blockOffset, $blockId, ${block.toBinaryString.reverse
-              .padTo(bits, '0')
-              .reverse}, ${mask.toBinaryString.reverse.padTo(bits, '0').reverse}")
             if ((block & mask) == mask) {
               el(blockOffset + bitId)
             }
 
           }
         }
+
+        blockId += 1
       }
+
     }
 
-    def get(n: Int): Boolean = {
-      val sz = size(t)
-      if (n <= sz) {
-        val blockId = 1 + (n / bits)
-        val bitId = n % bits
-        val mask = 1 << (bits - bitId - 1)
-        (t(blockId) & mask) == mask
-      } else false
+    @inline def get(n: Int): Boolean = {
+      // val sz = size(t)
+      // if (n <= sz) {
+      val blockId = 1 + (n / bits)
+      val bitId = n % bits
+      val mask = 1 << (bits - bitId - 1)
+      (t(blockId) & mask) == mask
+      // } else false
     }
 
     def empty: Boolean = {
       var nonEmpty = false
-      loops.breakable(1, blocks(size(t)), stopWhen = nonEmpty) { i =>
+      var i = 1
+      while (!nonEmpty && (i <= blocks(size(t)))) {
         nonEmpty = t(i) != 0
+        i += 1
       }
 
       !nonEmpty
@@ -652,82 +654,102 @@ object parser {
 
 }
 
-class ParseTests extends munit.FunSuite {
-  test("simple parsing and rewinding") {
-    Zone { implicit z =>
-      val STR = c"hello 25. //--> 1112312312312\n"
+// class ParseTests extends munit.FunSuite {
+//   test("simple parsing and rewinding") {
+//     Zone { implicit z =>
+//       val STR = c"hello 25. //--> 1112312312312\n"
 
-      val cur = parser.init(STR)
-      val key = stackalloc[CChar](100)
-      val value = stackalloc[Int]
-      val commentNum = stackalloc[Long]
-      val char = stackalloc[CChar]
+//       val cur = parser.init(STR)
+//       val key = stackalloc[CChar](100)
+//       val value = stackalloc[Int]
+//       val commentNum = stackalloc[Long]
+//       val char = stackalloc[CChar]
 
-      cur
-        .string(key)
-        .space()
-        .int(value)
-        .char(char)
-        .space()
-        .const(c"//-->")()
-        .space()
-        .long(commentNum)
-        .newline()
+//       cur
+//         .string(key)
+//         .space()
+//         .int(value)
+//         .char(char)
+//         .space()
+//         .const(c"//-->")()
+//         .space()
+//         .long(commentNum)
+//         .newline()
 
-      assert(!value == 25)
-      assertEquals(fromCString(key), "hello")
-      assertEquals(!char, '.'.toByte)
-      assertEquals(!commentNum, 1112312312312L)
-      assertEquals(cur.remainingLength.toInt, 0)
-      assert(cur.finished)
+//       assert(!value == 25)
+//       assertEquals(fromCString(key), "hello")
+//       assertEquals(!char, '.'.toByte)
+//       assertEquals(!commentNum, 1112312312312L)
+//       assertEquals(cur.remainingLength.toInt, 0)
+//       assert(cur.finished)
 
-      cur.rewind()
+//       cur.rewind()
 
-      assertEquals(cur.remainingLength, libc.string.strlen(STR).toUInt)
-      assertEquals(libc.string.strcmp(cur.remainingString, STR).toInt, 0)
-      assertEquals(cur.consumed, 0.toUInt)
-    }
-  }
-}
+//       assertEquals(cur.remainingLength, libc.string.strlen(STR).toUInt)
+//       assertEquals(libc.string.strcmp(cur.remainingString, STR).toInt, 0)
+//       assertEquals(cur.consumed, 0.toUInt)
+//     }
+//   }
+// }
 
-class IntMapTests extends munit.FunSuite {
-  test("IntMap acts like a map") {
-    Zone { implicit z =>
-      import SlowIntMap._
-      val mp = SlowIntMap.create
-      mp.put(25, 128)
-      mp.put(0, 1024)
-      mp.put(378, 873)
-      mp.put(25, 128)
+// class IntMapTests extends munit.FunSuite {
+//   test("IntMap acts like a map") {
+//     Zone { implicit z =>
+//       import SlowIntMap._
+//       val mp = SlowIntMap.create
+//       mp.put(25, 128)
+//       mp.put(0, 1024)
+//       mp.put(378, 873)
+//       mp.put(25, 128)
 
-      assertEquals(mp.getOrElse(25, -1), 128)
-      assertEquals(mp.getOrElse(378, -1), 873)
-      assertEquals(mp.getOrElse(0, -1), 1024)
-      assertEquals(mp.getOrElse(1, -1), -1)
-      assertEquals(mp.getOrElse(24, -1), -1)
-    }
-  }
-}
+//       assertEquals(mp.getOrElse(25, -1), 128)
+//       assertEquals(mp.getOrElse(378, -1), 873)
+//       assertEquals(mp.getOrElse(0, -1), 1024)
+//       assertEquals(mp.getOrElse(1, -1), -1)
+//       assertEquals(mp.getOrElse(24, -1), -1)
+//     }
+//   }
+// }
 
-class BitSetTests extends munit.FunSuite {
+// class BitSetTests extends munit.FunSuite {
 
-  test("Bitset.foreach works") {
-    Zone { implicit z =>
-      val M = 48
-      val bs = Bitset.create(M)
-      import Bitset._
+//   test("Bitset.foreach works for a full set") {
+//     Zone { implicit z =>
+//       val M = 132
+//       val bs = Bitset.create(M)
+//       import Bitset._
 
-      (1 to M).foreach { i =>
-        bs.set(i)
-      }
+//       (1 to M).foreach { i =>
+//         bs.set(i)
+//       }
 
-      val ls = List.newBuilder[Int]
+//       val ls = List.newBuilder[Int]
 
-      bs.foreach { el =>
-        ls.addOne(el)
-      }
+//       bs.foreach { el =>
+//         ls.addOne(el)
+//       }
 
-      assertEquals(ls.result(), (1 to M).toList)
-    }
-  }
-}
+//       assertEquals(ls.result(), (1 to M).toList)
+//     }
+//   }
+
+//   test("Bitset.foreach works for a incomplete set") {
+//     Zone { implicit z =>
+//       val M = 132
+//       val bs = Bitset.create(M)
+//       import Bitset._
+
+//       (1 to M).filter(_ % 2 == 0).foreach { i =>
+//         bs.set(i)
+//       }
+
+//       val ls = List.newBuilder[Int]
+
+//       bs.foreach { el =>
+//         ls.addOne(el)
+//       }
+
+//       assertEquals(ls.result(), (1 to M).filter(_ % 2 == 0).toList)
+//     }
+//   }
+// }
