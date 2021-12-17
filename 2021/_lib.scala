@@ -654,6 +654,14 @@ object parser {
 
 }
 
+trait SyntaxHelpers {
+  implicit class StringOps(i: Int) {
+    def bin(n: Int) = {
+      i.toBinaryString.reverse.padTo(n, '0').reverse
+    }
+  }
+}
+
 // class ParseTests extends munit.FunSuite {
 //   test("simple parsing and rewinding") {
 //     Zone { implicit z =>
