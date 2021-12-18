@@ -9,7 +9,8 @@ case class A(part1: Long, part2: Option[Long]):
   def render = s"Part 1: $part1\nPart 2: $part2"
 
 object A:
-  def apply(part1: Long) = A(part1, None)
+  def apply(part1: Long) = new A(part1, None)
+  def apply(part1: Long, part2: Long) = new A(part1, Some(part2))
 
 val answers = Map(
   2021 -> Map(
@@ -24,7 +25,11 @@ val answers = Map(
     10 -> A(26397, 288957),
     11 -> A(1656, 195),
     12 -> A(10, 36),
-    14 -> A(1588, 2188189693529L)
+    13 -> A(17),
+    14 -> A(1588, 2188189693529L),
+    15 -> A(40, 315),
+    16 -> A(31, 54),
+    17 -> A(45, 112)
   )
 )
 
@@ -40,11 +45,16 @@ val answers = Map(
     num.toLong
   }.get
 
-  val part2 = lines.collectFirst { case s"Part 2: $num" =>
-    num.toLong
-  }.get
+  val expected = answers(year)(day)
 
-  val answer = A(part1, part2)
+  val answer = 
+    expected.part2 match
+      case None    => A(part1)
+      case Some(_) => 
+        val part2 = lines.collectFirst { case s"Part 2: $num" =>
+          num.toLong
+        }.get
+        A(part1, part2)
 
   expect(answers(year)(day) == answer)
 end hello

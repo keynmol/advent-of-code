@@ -52,7 +52,6 @@ object Day16 extends SyntaxHelpers {
       val green = toCString(Console.GREEN)
       val reset = toCString(Console.RESET)
 
-      // val part_1_answer = {
       val packetTypes = WrappedArray.create[Int]()
       files.lines(args.head) { line =>
         val producer = new BitProducer(line)
@@ -111,7 +110,6 @@ object Day16 extends SyntaxHelpers {
             s"consumed $cnt values and the decimal is $number",
             cnt * 5
           )
-          println(s"Pushing $number on the stack")
           part_2_stack.push(number)
           cnt * 5
         }
@@ -125,9 +123,6 @@ object Day16 extends SyntaxHelpers {
         }
 
         def evaluate(typ: Int, subpackets: Int) = {
-          println(
-            s"Evaluating $typ for $subpackets subpackets, stack head: ${part_2_stack.peek()}"
-          )
           var expr = 0L
           typ match {
             case 0 =>
@@ -171,8 +166,6 @@ object Day16 extends SyntaxHelpers {
 
           }
 
-          println(s"Pushing $expr to the stack")
-
           part_2_stack.push(expr)
         }
 
@@ -200,12 +193,12 @@ object Day16 extends SyntaxHelpers {
           // }
           // stdio.printf(c"\n")
 
-          stdio.printf(cyan)
-          loops.loop(1, packet_depth) { _ =>
-            stdio.printf(c" > ")
-          }
-          stdio.printf(toCString(msg))
-          stdio.printf(reset)
+          // stdio.printf(cyan)
+          // loops.loop(1, packet_depth) { _ =>
+          //   stdio.printf(c" > ")
+          // }
+          // stdio.printf(toCString(msg))
+          // stdio.printf(reset)
           // stdio.printf(c"\n")
           // stdio.printf(red)
           // loops.loop(0, producer.maxIndex) { idx =>
@@ -213,7 +206,7 @@ object Day16 extends SyntaxHelpers {
 
           // }
           // stdio.printf(reset)
-          stdio.printf(c"\n")
+          // stdio.printf(c"\n")
         }
 
         def readPacket(from: Int): Int = {
@@ -303,20 +296,11 @@ object Day16 extends SyntaxHelpers {
 
         readPacket(0)
 
-        stdio.printf(c"\n%d -- %s", part_1_answer, line)
+        stdio.printf(c"Part 1: %d\n", part_1_answer)
+        stdio.printf(c"Part 2: %d\n", part_2_stack.pop())
 
-        while (!part_2_stack.isEmpty) {
-          stdio.printf(c"On stack: %ld\n", part_2_stack.pop())
-        }
       }
 
-    // packetTypes.foreach { typ =>
-    //   println(s"Packet type: $typ")
-    // }
-    // }
-
-    // println(s"Part 1: ${part_1_answer}")
-    // println(s"Part 2: ${part_2_answer}")
     }
   }
 }

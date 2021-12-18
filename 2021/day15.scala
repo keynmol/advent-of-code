@@ -8,7 +8,7 @@ import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
 
 object Day15 {
-  def readInput(file: String)(implicit z: Zone): Matrix.Typ[Int] = {
+  private def readInput(file: String)(implicit z: Zone): Matrix.Typ[Int] = {
     val mp = WrappedArray.create[CString]()
     var width = 0
     files.lines(file) { line =>
@@ -34,7 +34,7 @@ object Day15 {
     struct
   }
 
-  def printGraph(labyrinth: Matrix.Typ[Int]) = {
+  private def printGraph(labyrinth: Matrix.Typ[Int]) = {
     import Matrix._
     loops.loop(0, labyrinth.maxRow) { row =>
       loops.loop(0, labyrinth.maxCol) { col =>
@@ -229,10 +229,8 @@ object Day15 {
         val matrix = readInput(args.head)
         val (results, prev) = dijkstra(matrix)
 
-        val optimal = Bitset.create(results.width * results.height)
-
-        if (matrix.width < 100)
-          print(matrix, results, optimal)
+        // if (matrix.width < 100)
+        //   print(matrix, results, findOptimal(prev))
 
         results.unsafe(0, 0)
       }
@@ -242,9 +240,6 @@ object Day15 {
         val matrix = readInput(args.head)
         val large = replicate(matrix, 5)
         val (dist, prev) = dijkstra(large)
-
-        if (matrix.width < 100)
-          print(large, dist, findOptimal(prev))
 
         dist.unsafe(0, 0)
       }

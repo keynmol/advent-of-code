@@ -65,10 +65,8 @@ object Day13 {
 
   def main(args: Array[String]): Unit = {
     Zone.apply { implicit z =>
-      val num = stackalloc[Int]
-
       val part_1_answer = {
-        var answer = 0
+        var answer = -1
         val coords = WrappedArray.create[Coord]()
         val folds = WrappedArray.create[Int]()
         val matrix = readInput(args.head, coords, folds)
@@ -95,9 +93,6 @@ object Day13 {
             loops.loop(0, right) { col =>
               if (matrix.at(row, col, 100) == 1)
                 dots += 1
-              else if (matrix.at(row, col, 100) == 100) {
-                println(s"wuuuut $row $col")
-              }
             }
 
           }
@@ -105,7 +100,6 @@ object Day13 {
         }
 
         folds.foreach { fold =>
-          stdio.printf(c"Dimenstions: bottom=%d, right=%d\n", bottom, right)
           val isHorizontal = fold > 0
           val foldAmount = if (isHorizontal) fold else -fold
           val oldBottom = bottom
@@ -116,12 +110,6 @@ object Day13 {
           } else {
             bottom = foldAmount - 1
           }
-          stdio.printf(
-            c"Dimenstions (after applying fold %d): bottom=%d, right=%d\n",
-            fold,
-            bottom,
-            right
-          )
           if (!isHorizontal) {
             loops.loop(foldAmount + 1, oldBottom) { removedRow =>
               val distance = removedRow - (foldAmount + 1)
@@ -146,24 +134,12 @@ object Day13 {
               }
             }
           }
-          // printMatrix
-          stdio.printf(c"Dots: %d after %d\n", countMatrix, fold)
+          if (answer == -1) answer = countMatrix
         }
-
-        printMatrix
-
-      }
-
-      val part_2_answer = {
-        var answer = 0
-        files.linesWithIndex(args.head) { case (line, idx) =>
-          stdio.sscanf(line, c"%d\n", num)
-        }
-
         answer
       }
 
-    // println(s"Part 1: ${part_1_answer}")
+      println(s"Part 1: ${part_1_answer}")
     // println(s"Part 2: ${part_2_answer}")
     }
   }
