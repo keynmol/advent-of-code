@@ -3,11 +3,8 @@
 // using options -Ywarn-unused
 
 import scala.scalanative.unsafe._
-import scala.scalanative.unsigned._
+
 import scalanative.libc.stdio
-import scala.scalanative.libc.stdlib
-import scala.scalanative.runtime.libc
-import scala.scalanative.libc.string
 
 object DayStub {
 

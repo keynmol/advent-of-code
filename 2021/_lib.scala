@@ -486,6 +486,7 @@ object loops {
   @alwaysinline def loop(from: Int, to: Int, inclusive: Boolean = true)(
       f: Int => Unit
   ) {
+
     var i = from
     while (i <= { if (inclusive) to else to - 1 }) {
       f(i)

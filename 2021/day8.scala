@@ -2,12 +2,9 @@
 // using scala-native
 // using options -Ywarn-unused
 
+import scala.scalanative.libc.string
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
-import scalanative.libc.stdio
-import scala.scalanative.libc.stdlib
-import scala.scalanative.runtime.libc
-import scala.scalanative.libc.string
 
 object Day8 {
 
@@ -24,12 +21,8 @@ object Day8 {
     numb
   }
 
-
   def main(args: Array[String]): Unit = {
     Zone.apply { implicit z =>
-      val num = stackalloc[Int]
-      val records = stackalloc[Int](10)
-
       val part_1_answer = {
         var answer = 0
         val word = stackalloc[CChar](7)

@@ -107,7 +107,7 @@ object Day9 {
 
             if (isLowPoint) {
               val visited = WrappedArray.create[Int]()
-              val size = growBasin(row, col, visited)
+              growBasin(row, col, visited)
               basins.appendAndGrow(visited.size)
             }
 

@@ -2,9 +2,8 @@
 // using scala-native
 // using options -Ywarn-unused
 
-import scala.scalanative.unsafe._
-import scala.scalanative.runtime.libc
 import scala.scalanative.libc.stdio
+import scala.scalanative.unsafe._
 
 object Day16 extends SyntaxHelpers {
 
@@ -46,11 +45,11 @@ object Day16 extends SyntaxHelpers {
 
   def main(args: Array[String]): Unit = {
     Zone.apply { implicit z =>
-      val red = toCString(Console.RED)
-      val yello = toCString(Console.YELLOW)
-      val cyan = toCString(Console.CYAN)
-      val green = toCString(Console.GREEN)
-      val reset = toCString(Console.RESET)
+      // val red = toCString(Console.RED)
+      // val yello = toCString(Console.YELLOW)
+      // val cyan = toCString(Console.CYAN)
+      // val green = toCString(Console.GREEN)
+      // val reset = toCString(Console.RESET)
 
       val packetTypes = WrappedArray.create[Int]()
       files.lines(args.head) { line =>

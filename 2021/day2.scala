@@ -2,11 +2,6 @@
 // using scala-native
 
 import scala.scalanative.unsafe._
-import scala.scalanative.unsigned._
-import scalanative.libc.stdio
-import scala.scalanative.libc.stdlib
-import scala.scalanative.runtime.libc
-import scala.scalanative.libc.string
 
 object Day2 {
 
@@ -34,7 +29,6 @@ object Day2 {
       }
 
       val part_2_answer = {
-        var answer = 0
         var horizontal = 0
         var aim = 0
         var depth = 0
