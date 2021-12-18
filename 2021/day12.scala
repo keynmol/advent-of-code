@@ -4,9 +4,6 @@
 
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
-import scalanative.libc.stdio
-import scala.scalanative.libc.stdlib
-import scala.scalanative.runtime.libc
 import scala.scalanative.libc.string
 import scala.scalanative.annotation.alwaysinline
 
@@ -111,10 +108,7 @@ object Day12 {
 
   def main(args: Array[String]): Unit = {
     Zone.apply { implicit z =>
-      val num = stackalloc[Int]
-
       val part_1_answer = {
-        var answer = 0
         val nodes = WrappedArray.create[CString]()
         val adjacency = readInput(filename = args.head, nodes)
         val start = indexOf(c"start", nodes, string.strlen(c"start"))
@@ -122,7 +116,6 @@ object Day12 {
         import Bitset._
 
         def go(nodeIdx: Int, visited: Bitset.Typ, level: Int): Int = {
-          def printLevel = loops.loop(1, level) { _ => stdio.printf(c"-") }
           visited.set(nodeIdx)
           var paths = 0
           if (nodeIdx == end) paths = 1
@@ -161,7 +154,6 @@ object Day12 {
         def alreadyVisitedASmallCaveTwice(visited: Bitset.Typ): Boolean = {
           var found = -1
           loops.breakable(1, nodes.size, stopWhen = found != -1) { nodeId =>
-            val nodeIdx = nodeId - 1
             if (
               !bigcaves.get(nodeId) &&
               visited.get(nodeId) &&

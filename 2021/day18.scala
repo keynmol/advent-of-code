@@ -322,7 +322,7 @@ object Day18 {
 
       val part_1_answer = {
         var result: Pair = null
-        files.parsedLines(args.head) { case (l, p) =>
+        files.parsedLines(args.head) { case (_, p) =>
           val pair = parsePair(p)
           if (result == null) result = pair
           else
@@ -335,7 +335,7 @@ object Day18 {
 
       val part_2_answer = {
         val pairs = WrappedArray.create[Pair]()
-        files.parsedLines(args.head) { case (l, p) =>
+        files.parsedLines(args.head) { case (_, p) =>
           val pair = parsePair(p)
           pairs.appendAndGrow(pair)
         }

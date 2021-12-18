@@ -2,10 +2,9 @@
 // using scala-native
 // using options -Ywarn-unused
 
+import scala.scalanative.libc.string
 import scala.scalanative.unsafe._
 import scala.scalanative.unsigned._
-import scalanative.libc.stdio
-import scala.scalanative.libc.string
 
 object Day11 {
   import Matrix._
@@ -62,7 +61,7 @@ object Day11 {
         val STEPS = 100
         val matrix = readInput(args.head)
 
-        loops.loop(1, STEPS) { step =>
+        loops.loop(1, STEPS) { _ =>
           loops.loop(0, matrix.maxRow) { row =>
             loops.loop(0, matrix.maxCol) { col =>
               answer += inc(row, col, matrix)
