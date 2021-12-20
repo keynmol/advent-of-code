@@ -7,7 +7,9 @@ nativeCompileOptions += "-arch arm64"
 /*   _.withTargetTriple("arm64-apple-darwin20.6.0") */
 /* } */
 
-val d = "Day18"
+libraryDependencies += "org.scalameta" %%% "munit" % "1.0.0-M1+13-dd5d3921+20211219-2000-SNAPSHOT"
+
+val d = "Day19"
 
 Compile / run / mainClass := Some(d)
 Compile / mainClass := Some(d)

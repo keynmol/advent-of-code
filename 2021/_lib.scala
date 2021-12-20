@@ -265,6 +265,70 @@ object Matrix {
       }
       ptr
     }
+
+    final def printInt(
+        format: CString,
+        highlightValues: Bitset.Typ
+    )(implicit z: Zone, a: T =:= Int) = {
+      import Bitset._
+      val red = toCString(Console.RED)
+      val yello = toCString(Console.YELLOW)
+      val green = toCString(Console.CYAN + Console.BOLD)
+      val reset = toCString(Console.RESET)
+      stdio.printf(yello)
+      stdio.printf(c"    ")
+      loops.loop(0, maxCol) { col =>
+        stdio.printf(c"%6d", col)
+      }
+      stdio.printf(reset)
+      stdio.printf(c"\n")
+
+      loops.loop(0, maxRow) { row =>
+        stdio.printf(yello)
+        stdio.printf(format, row)
+        stdio.printf(reset)
+        loops.loop(0, maxCol) { col =>
+          if (highlightValues.get(unsafe(row, col)))
+            stdio.printf(green)
+          stdio.printf(format, unsafe(row, col))
+          stdio.printf(reset)
+
+        }
+        stdio.printf(c"\n")
+      }
+    }
+
+    final def print(
+        format: CString,
+        highlight: (Int, Int, T) => Boolean = (_, _, _) => false
+    )(implicit z: Zone) = {
+      import Bitset._
+      val red = toCString(Console.RED)
+      val yello = toCString(Console.YELLOW)
+      val green = toCString(Console.GREEN)
+      val reset = toCString(Console.RESET)
+      stdio.printf(yello)
+      stdio.printf(c"    ")
+      loops.loop(0, maxCol) { col =>
+        stdio.printf(format, col)
+      }
+      stdio.printf(reset)
+      stdio.printf(c"\n")
+
+      loops.loop(0, maxRow) { row =>
+        stdio.printf(yello)
+        stdio.printf(format, row)
+        stdio.printf(reset)
+        loops.loop(0, maxCol) { col =>
+          if (highlight(row, col, unsafe(row, col)))
+            stdio.printf(green)
+          stdio.printf(format, unsafe(row, col))
+          stdio.printf(reset)
+
+        }
+        stdio.printf(c"\n")
+      }
+    }
   }
 }
 class Stack[T: Tag] private (internal: WrappedArray[T]) {
@@ -663,102 +727,328 @@ trait SyntaxHelpers {
   }
 }
 
-// class ParseTests extends munit.FunSuite {
-//   test("simple parsing and rewinding") {
-//     Zone { implicit z =>
-//       val STR = c"hello 25. //--> 1112312312312\n"
+object MathShit {
+  type Coordinate = CStruct3[Int, Int, Int]
+  implicit final class Cops(val co: Coordinate) extends AnyVal {
+    @alwaysinline def x = co._1
+    @alwaysinline def y = co._2
+    @alwaysinline def z = co._3
+    @alwaysinline def setX(value: Int) =
+      co._1 = value
+    @alwaysinline def setY(value: Int) =
+      co._2 = value
+    @alwaysinline def setZ(value: Int) =
+      co._3 = value
 
-//       val cur = parser.init(STR)
-//       val key = stackalloc[CChar](100)
-//       val value = stackalloc[Int]
-//       val commentNum = stackalloc[Long]
-//       val char = stackalloc[CChar]
+    @alwaysinline def copy(implicit zone: Zone): Coordinate = {
+      Coordinate.create(x, y, z)
+    }
 
-//       cur
-//         .string(key)
-//         .space()
-//         .int(value)
-//         .char(char)
-//         .space()
-//         .const(c"//-->")()
-//         .space()
-//         .long(commentNum)
-//         .newline()
+    // @alwaysinline def manhattan(other: Coordinate): Int = {
+    //   import scala.scalanative.libc.math.abs
+    //   abs(x - other.x) +
+    //     abs(y - other.y) +
+    //     abs(z - other.z)
+    // }
 
-//       assert(!value == 25)
-//       assertEquals(fromCString(key), "hello")
-//       assertEquals(!char, '.'.toByte)
-//       assertEquals(!commentNum, 1112312312312L)
-//       assertEquals(cur.remainingLength.toInt, 0)
-//       assert(cur.finished)
+    @alwaysinline def euclid(other: Coordinate): Int = {
+      @alwaysinline def sq(i: Int) = i * i
+      sq(x - other.x) + sq(y - other.y) + sq(z - other.z)
+    }
 
-//       cur.rewind()
+    @alwaysinline def ===(other: Coordinate) =
+      x == other.x && y == other.y && z == other.z
 
-//       assertEquals(cur.remainingLength, libc.string.strlen(STR).toUInt)
-//       assertEquals(libc.string.strcmp(cur.remainingString, STR).toInt, 0)
-//       assertEquals(cur.consumed, 0.toUInt)
-//     }
-//   }
-// }
+    def show: String = {
+      s"Coordinate($x, $y, $z)"
+    }
 
-// class IntMapTests extends munit.FunSuite {
-//   test("IntMap acts like a map") {
-//     Zone { implicit z =>
-//       import SlowIntMap._
-//       val mp = SlowIntMap.create
-//       mp.put(25, 128)
-//       mp.put(0, 1024)
-//       mp.put(378, 873)
-//       mp.put(25, 128)
+    def isZero =
+      x == 0 && y == 0 && z == 0
 
-//       assertEquals(mp.getOrElse(25, -1), 128)
-//       assertEquals(mp.getOrElse(378, -1), 873)
-//       assertEquals(mp.getOrElse(0, -1), 1024)
-//       assertEquals(mp.getOrElse(1, -1), -1)
-//       assertEquals(mp.getOrElse(24, -1), -1)
-//     }
-//   }
-// }
+    def negate: Coordinate = {
+      setX(-x)
+      setY(-y)
+      setZ(-z)
+      co
+    }
 
-// class BitSetTests extends munit.FunSuite {
+  }
+  object Coordinate {
+    def create(x: Int, y: Int, z: Int)(implicit zone: Zone): Coordinate = {
+      val mem = alloc[Coordinate](1)
+      mem._1 = x
+      mem._2 = y
+      mem._3 = z
 
-//   test("Bitset.foreach works for a full set") {
-//     Zone { implicit z =>
-//       val M = 132
-//       val bs = Bitset.create(M)
-//       import Bitset._
+      mem
+    }
 
-//       (1 to M).foreach { i =>
-//         bs.set(i)
-//       }
+  }
 
-//       val ls = List.newBuilder[Int]
+  type RotationMatrix = CStruct3[Int, Int, Int]
+  implicit class Rops(rm: RotationMatrix) {
+    def rotate(coord: Coordinate) = {
+      if (rm._1 != 0) {
+        val xCosine = IntegerCosine(rm._1)
+        val xSine = IntegerSine(rm._1)
 
-//       bs.foreach { el =>
-//         ls.addOne(el)
-//       }
+        val x = coord.x
+        val y = coord.y
+        val z = coord.z
 
-//       assertEquals(ls.result(), (1 to M).toList)
-//     }
-//   }
+        coord.setX(x)
+        coord.setY(y * xCosine - z * xSine)
+        coord.setZ(y * xSine + z * xCosine)
+      }
 
-//   test("Bitset.foreach works for a incomplete set") {
-//     Zone { implicit z =>
-//       val M = 132
-//       val bs = Bitset.create(M)
-//       import Bitset._
+      if (rm._2 != 0) {
+        val x = coord.x
+        val y = coord.y
+        val z = coord.z
+        val yCosine = IntegerCosine(rm._2)
+        val ySine = IntegerSine(rm._2)
+        // println(s"howdy cos=$yCosine sin=$ySine")
 
-//       (1 to M).filter(_ % 2 == 0).foreach { i =>
-//         bs.set(i)
-//       }
+        coord.setX(z * ySine + x * yCosine)
+        coord.setY(y)
+        coord.setZ(z * yCosine - x * ySine)
+      }
 
-//       val ls = List.newBuilder[Int]
+      if (rm._3 != 0) {
+        val x = coord.x
+        val y = coord.y
+        val z = coord.z
+        val zCosine = IntegerCosine(rm._3)
+        val zSine = IntegerSine(rm._3)
 
-//       bs.foreach { el =>
-//         ls.addOne(el)
-//       }
+        coord.setX(x * zCosine - y * zSine)
+        coord.setY(x * zSine + y * zCosine)
+        coord.setZ(z)
+      }
 
-//       assertEquals(ls.result(), (1 to M).filter(_ % 2 == 0).toList)
-//     }
-//   }
-// }
+      coord
+
+    }
+
+    def set(x: Int, y: Int, z: Int) = {
+      rm._1 = x
+      rm._2 = y
+      rm._3 = z
+    }
+
+  }
+  object RotationMatrix {
+    def create(turnsAlongX: Int, turnsAlongY: Int, turnsAlongZ: Int)(implicit
+        z: Zone
+    ): RotationMatrix = {
+      val m = alloc[RotationMatrix](1)
+
+      m._1 = turnsAlongX
+      m._2 = turnsAlongY
+      m._3 = turnsAlongZ
+
+      m
+    }
+  }
+
+  def IntegerCosine(turns: Int): Int =
+    if (turns % 4 == 0) 1 else if (turns % 2 == 0) -1 else 0
+
+  def IntegerSine(turns: Int): Int =
+    if (turns < 0) -IntegerSine(-turns)
+    else {
+      if (turns % 2 == 1) 1 else if ((turns - 1) % 4 == 0) -1 else 0
+    }
+}
+
+class ParseTests extends munit.FunSuite {
+  test("simple parsing and rewinding") {
+    Zone { implicit z =>
+      val STR = c"hello 25. //--> 1112312312312\n"
+
+      val cur = parser.init(STR)
+      val key = stackalloc[CChar](100)
+      val value = stackalloc[Int]
+      val commentNum = stackalloc[Long]
+      val char = stackalloc[CChar]
+
+      cur
+        .string(key)
+        .space()
+        .int(value)
+        .char(char)
+        .space()
+        .const(c"//-->")()
+        .space()
+        .long(commentNum)
+        .newline()
+
+      assert(!value == 25)
+      assertEquals(fromCString(key), "hello")
+      assertEquals(!char, '.'.toByte)
+      assertEquals(!commentNum, 1112312312312L)
+      assertEquals(cur.remainingLength.toInt, 0)
+      assert(cur.finished)
+
+      cur.rewind()
+
+      assertEquals(cur.remainingLength, libc.string.strlen(STR).toUInt)
+      assertEquals(libc.string.strcmp(cur.remainingString, STR).toInt, 0)
+      assertEquals(cur.consumed, 0.toUInt)
+    }
+  }
+}
+
+class IntMapTests extends munit.FunSuite {
+  test("IntMap acts like a map") {
+    Zone { implicit z =>
+      import SlowIntMap._
+      val mp = SlowIntMap.create
+      mp.put(25, 128)
+      mp.put(0, 1024)
+      mp.put(378, 873)
+      mp.put(25, 128)
+
+      assertEquals(mp.getOrElse(25, -1), 128)
+      assertEquals(mp.getOrElse(378, -1), 873)
+      assertEquals(mp.getOrElse(0, -1), 1024)
+      assertEquals(mp.getOrElse(1, -1), -1)
+      assertEquals(mp.getOrElse(24, -1), -1)
+    }
+  }
+}
+
+class BitSetTests extends munit.FunSuite {
+
+  test("Bitset.foreach works for a full set") {
+    Zone { implicit z =>
+      val M = 132
+      val bs = Bitset.create(M)
+      import Bitset._
+
+      (1 to M).foreach { i =>
+        bs.set(i)
+      }
+
+      val ls = List.newBuilder[Int]
+
+      bs.foreach { el =>
+        ls.addOne(el)
+      }
+
+      assertEquals(ls.result(), (1 to M).toList)
+    }
+  }
+
+  test("Bitset.foreach works for a incomplete set") {
+    Zone { implicit z =>
+      val M = 132
+      val bs = Bitset.create(M)
+      import Bitset._
+
+      (1 to M).filter(_ % 2 == 0).foreach { i =>
+        bs.set(i)
+      }
+
+      val ls = List.newBuilder[Int]
+
+      bs.foreach { el =>
+        ls.addOne(el)
+      }
+
+      assertEquals(ls.result(), (1 to M).filter(_ % 2 == 0).toList)
+    }
+  }
+}
+
+class MathShitTests extends munit.FunSuite {
+  import MathShit._
+  test("I've no idea what I'm doing") {
+    loops.loop(-2, 2) { i =>
+      val sine = MathShit.IntegerSine(i)
+      val cosine = MathShit.IntegerCosine(i)
+
+      assertEquals(
+        sine * sine + cosine * cosine,
+        1,
+        s"That trigonometry stuff holds for $i: sine is $sine, cosine is $cosine"
+      )
+    }
+  }
+  test("Sine is well-defined") {
+    loops.loop(-2, 2) { i =>
+      val sine = MathShit.IntegerSine(i)
+      val rem = math.abs(i) % 2
+
+      assertEquals(
+        math.abs(sine) % 2,
+        rem,
+        s"That trigonometry stuff holds for $i: sine is $sine"
+      )
+    }
+  }
+  test("Cosine is well-defined") {
+    loops.loop(-2, 2) { i =>
+      val cosine = MathShit.IntegerCosine(i)
+      val rem = math.abs(i) % 2
+
+      assertEquals(
+        math.abs(cosine) % 2,
+        1 - rem,
+        s"That trigonometry stuff holds for $i: cosine is $cosine"
+      )
+    }
+  }
+
+  test("rotate around x correct") {
+    Zone { implicit z =>
+      val coord = Coordinate.create(1, 2, 3)
+      val c = RotationMatrix.create(1, 0, 0).rotate(coord.copy)
+
+      assertEquals(c.show, Coordinate.create(1, -3, 2).show)
+    }
+  }
+  test("rotate around y is correct") {
+    Zone { implicit z =>
+      val coord = Coordinate.create(1, 2, 3)
+      val c = RotationMatrix.create(0, 1, 0).rotate(coord.copy)
+
+      assertEquals(c.show, Coordinate.create(3, 2, -1).show)
+    }
+  }
+  test("rotate around z is correct") {
+    Zone { implicit z =>
+      val coord = Coordinate.create(1, 2, 3)
+      val c = RotationMatrix.create(0, 0, 1).rotate(coord.copy)
+
+      assertEquals(c.show, Coordinate.create(-2, 1, 3).show)
+    }
+  }
+  // test("rotate around y is reversible") {
+  //   Zone { implicit z =>
+  //     val coord = Coordinate.create(1, 2, 3)
+  //     loops.loop(-100, 100) { x =>
+  //       val rm = RotationMatrix.create(0, x, 0)
+
+  //       val rotated = rm.rotate(coord)
+  //       val reversed = rm.negate.rotate(rotated)
+
+  //       assertEquals(coord.show, reversed.show)
+  //     }
+  //   }
+  // }
+  // test("rotate around z is reversible") {
+  //   Zone { implicit z =>
+  //     val coord = Coordinate.create(1, 2, 3)
+  //     loops.loop(-100, 100) { x =>
+  //       val rm = RotationMatrix.create(0, 0, x)
+
+  //       val rotated = rm.rotate(coord.copy)
+  //       val reversed = rm.negate.rotate(rotated)
+
+  //       assertEquals(coord.show, reversed.show)
+  //     }
+  //   }
+  // }
+}
